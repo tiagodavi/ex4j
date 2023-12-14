@@ -82,9 +82,9 @@ Although you can apply filters directly the recommended way of doing so is by us
 
 Due to a way Elixir converts list to strings you should avoid passing lists directly, try this instead: 
 
-For lists try this: `fragment(u.age, "IN", "[35,38]")` 
-For numbers try this `fragment(u.age, "=", 38)`
-For anything else keep the string: 
+- For lists try this: `fragment(u.age, "IN", "[35,38]")` 
+- For numbers try this `fragment(u.age, "=", 38)`
+- For anything else keep the string: 
 
 `fragment(u.age, "IN", "[35,38]") or not fragment(u.name, "=", "DA")`
 `fragment(u.age, "IN", "[35,38]") or fragment(u, "IS NOT", "NULL")`
