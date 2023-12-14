@@ -86,8 +86,8 @@ Due to a way Elixir converts list to strings you should avoid passing lists dire
 - For numbers try this `fragment(u.age, "=", 38)`
 - For anything else keep the string: 
 
-`fragment(u.age, "IN", "[35,38]") or not fragment(u.name, "=", "DA")`
-`fragment(u.age, "IN", "[35,38]") or fragment(u, "IS NOT", "NULL")`
+- `fragment(u.age, "IN", "[35,38]") or not fragment(u.name, "=", "DA")`
+- `fragment(u.age, "IN", "[35,38]") or fragment(u, "IS NOT", "NULL")`
 
 ```elixir
 defmodule App do
