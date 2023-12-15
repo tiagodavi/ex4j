@@ -19,11 +19,11 @@ defmodule Ex4j.Cypher do
   ## Examples
 
       iex> match(User, as: :user)
-      %{match: %{user: {User, []}}
+      %{match: %{user: "User"}}
 
       iex> query = match(User, as: :user)
       iex> match(query, Comment, as: :comment)
-      %{match: %{user: {User, []}, comment: {Comment, []}}}
+      %{match: %{user: "User", comment: "Comment"}}
 
   ## Cypher
 
@@ -46,23 +46,23 @@ defmodule Ex4j.Cypher do
   ## Parameters
 
     - query: The previous query
-    - binding: The alias of the Edge or Vertex
-    - rules: The expression rule
+    - label: The alias of the Edge or Vertex
+    - rules: The String rules
 
   ## Examples
 
       iex> query = match(User, as: :user)
-      iex> where(query, [user: u], fragment(u.name, "=", "Tiago") and fragment(u.age, "=", 38))
+      iex> where(query, :user, "user.name = 'Tiago' AND user.age = 38")
       %{
-        match: %{user: User},
+        match: %{user: "User"},
         where: %{user: "user.name = 'Tiago' AND user.age = 38"}
       }
 
       iex> query = match(User, as: :user)
-      iex> where(query, [user: u], fragment(u.name, "=", "Tiago") or fragment(u.age, "IN", "[38]"))
+      iex> where(query, :user, "user.name = 'Tiago' OR user.age IN [38]")
       %{
-        match: %{user: User},
-        where: %{user: "user.name = 'Tiago' OR user.age in [38]"}
+        match: %{user: "User"},
+        where: %{user: "user.name = 'Tiago' OR user.age IN [38]"}
       }
 
   ## Cypher
@@ -70,29 +70,14 @@ defmodule Ex4j.Cypher do
       MATCH(user:User WHERE user.age = 38 AND user.name = 'Tiago')
       MATCH(user:User WHERE user.name = 'Tiago' OR user.age IN [38])
   """
-  @spec where(query :: map(), binding :: keyword(), rules :: term()) :: map()
-  defmacro where(query, binding, rules) do
-    binding = Macro.escape(binding)
-    rules = Macro.escape(rules)
+  @spec where(query :: map(), label :: atom(), rules :: String.t()) :: map()
+  def where(query, label, rules) do
+    where =
+      query
+      |> Map.get(:where, %{})
+      |> Map.put(label, rules)
 
-    quote do
-      [{key, {target, _, _}}] = unquote(binding)
-
-      rules =
-        Macro.to_string(unquote(rules))
-        |> String.replace(to_string(target), to_string(key))
-        |> String.replace("==", "=")
-        |> String.replace("not", "NOT")
-        |> String.replace("and", "AND")
-        |> String.replace("or", "OR")
-        |> String.replace("in", "IN")
-        |> String.replace("\"", "'")
-
-      where = Map.get(unquote(query), :where, %{})
-      prev_rules = Map.get(where, key, [])
-      where = Map.put(where, key, prev_rules ++ rules)
-      Map.put(unquote(query), :where, where)
-    end
+    Map.put(query, :where, where)
   end
 
   @doc """
@@ -120,7 +105,7 @@ defmodule Ex4j.Cypher do
       iex> return(query, :comment, [:text])
       %{
           return: %{user: [:age, :name], comment: [:text]},
-          match: %{user: {User, []}, comment: {Comment, []}}
+          match: %{user: "User", comment: "Comment"}
       }
 
   ## Cypher
@@ -156,7 +141,7 @@ defmodule Ex4j.Cypher do
       iex> query = match(User, as: :user)
       iex> query = return(query, :user)
       iex> limit(query, 10)
-      %{return: %{user: []}, match: %{user: {User, []}}, limit: 10}
+      %{return: %{user: []}, match: %{user: "User"}, limit: 10}
 
   ## Cypher
 
@@ -186,12 +171,12 @@ defmodule Ex4j.Cypher do
       iex> query = match(User, as: :user)
       iex> query = vertex(query, Comment, as: :comment)
       iex> query = edge(query, HAS, as: :h, from: :user, to: :comment, type: :any)
-      iex> query = where(query, [user: u], u.name == "Tiago"])
-      iex> query = where(query, [h: h], h.value == 42)
+      iex> query = where(query, :user, "user.name = 'Tiago'"])
+      iex> query = where(query, :h, "h.value = 42")
       iex> return(query, :comment, [:text])
       %{
-        match: %{user: User},
-        vertex: %{comment: Comment},
+        match: %{user: "User"},
+        vertex: %{comment: "Comment"},
         where: %{
           user: "user.name = 'Tiago'",
           h: "h.value = 42"
@@ -237,19 +222,19 @@ defmodule Ex4j.Cypher do
       iex> query = match(User, as: :user)
       iex> query = vertex(query, Comment, as: :comment)
       iex> query = edge(query, HAS, as: :h, from: :user, to: :comment, type: :any)
-      iex> query = where(query, [user: u], u.name == "Tiago")
-      iex> query = where(query, [comment: c], fragment(c.value, "IN", "[1,2,3]"))
-      iex> query = where(query, [h: h], h.total == 10)
+      iex> query = where(query, :user, "user.name = 'Tiago'")
+      iex> query = where(query, :comment, "comment.value IN [1,2,3]")
+      iex> query = where(query, :h, "h.total = 10")
       iex> return(query, :user)
       %{
-          match: %{user: User},
+          match: %{user: "User"},
           where: %{
-            user: "user.name = 'Tiago'",
+            user:  "user.name = 'Tiago'",
             h: "h.total = 10",
             comment: "comment.value IN [1, 2, 3]"
           },
           edge: %{user: %{module: HAS, type: :any, to: :comment, label: :h}},
-          vertex: %{comment: Comment},
+          vertex: %{comment: "Comment"},
           return: %{user: []}
       }
 
@@ -283,13 +268,13 @@ defmodule Ex4j.Cypher do
       iex> query = match(User, as: :user)
       iex> query = return(query, :user)
       iex> run(query)
-      %{return: %{user: []}, match: %{user: {User, []}}}
+      [%{"user" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}}]
 
       iex> query = \""" MATCH (user:User WHERE user.name = 'Tiago')
                        RETURN user
                   \"""
       iex> run(query)
-      %{return: %{user: []}, match: %{user: {User, []}}}
+      [%{"user" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}}]
   """
   @spec run(query :: map() | String.t()) :: any()
   def run(query) when is_map(query) do
@@ -380,39 +365,10 @@ defmodule Ex4j.Cypher do
   defp build_rules(%{where: where}, key) do
     rules = Map.get(where, key, "")
 
-    fragments =
-      ~r/fragment\((?<fragment>[^()]+)\)/
-      |> Regex.scan(rules)
-      |> List.flatten()
-
-    rules = Enum.join([" WHERE ", rules])
-
-    build_fragment(rules, fragments)
+    Enum.join([" WHERE ", rules])
   end
 
   defp build_rules(_query, _key), do: ""
-
-  defp build_fragment(str, [a, b | tail]) do
-    [prop, keyword, value] = String.split(b, ~r{,(?!\d)})
-
-    value =
-      cond do
-        String.contains?(value, "[") -> String.replace(value, "'", "")
-        String.contains?(value, "NULL") -> String.replace(value, "'", "")
-        String.contains?(value, "NOT") -> String.replace(value, "'", "")
-        String.contains?(value, "XOR") -> String.replace(value, "'", "")
-        true -> value
-      end
-
-    str
-    |> String.replace(
-      a,
-      "#{String.replace(prop, "'", "")}#{String.replace(keyword, "'", "")}#{value}"
-    )
-    |> build_fragment(tail)
-  end
-
-  defp build_fragment(str, []), do: str
 
   defp build_return(elements, %{return: return}) do
     element =

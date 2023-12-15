@@ -73,21 +73,10 @@ end
 ```bash
   iex> App.execute()
   [
-  %{"u" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}},
-  %{"u" => %Node.User{uuid: nil, name: "Davi", age: 35, email: nil}}
+    %{"u" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}},
+    %{"u" => %Node.User{uuid: nil, name: "Davi", age: 35, email: nil}}
   ]
 ```
-
-Although you can apply filters directly the recommended way of doing so is by using fragments to keep consistency and avoid mistakes: 
-
-Due to a way Elixir converts list to strings you should avoid passing lists directly, try this instead: 
-
-- For lists try this: `fragment(u.age, "IN", "[35,38]")` 
-- For numbers try this `fragment(u.age, "=", 38)`
-- For anything else keep the string: 
-
-- `fragment(u.age, "IN", "[35,38]") or not fragment(u.name, "=", "DA")`
-- `fragment(u.age, "IN", "[35,38]") or fragment(u, "IS NOT", "NULL")`
 
 ```elixir
 defmodule App do
@@ -97,7 +86,9 @@ defmodule App do
    match(Node.User, as: :u)
     |> vertex(Node.Comment, as: :c)
     |> edge(Node.Has, as: :h, from: :u, to: :c, type: :out)
-    |> where([u: u], fragment(u.age, "IN", "[35,38]") and not fragment(u.name, "=", "DA"))
+    |> where(:u, "u.age IN [35,38] AND u.name CONTAINS 'Ti'")
+    |> where(:c, "c.content CONTAINS 'Article'")
+    |> where(:h, "h.date > '2023-12-15 00:46:05.140690Z'")
     |> return(:u)
     |> return(:c)
     |> run()
@@ -106,17 +97,17 @@ end
 ```
 
 ```bash
-  iex> User.execute()
+ iex> User.execute()
  [
-  %{
-    "c" => %Node.Comment{uuid: nil, content: "Tiago's Comment"},
-    "u" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}
-  },
-  %{
-    "c" => %Node.Comment{uuid: nil, content: "Davi's Comment"},
-    "u" => %Node.User{uuid: nil, name: "Davi", age: 35, email: nil}
-  }
-]
+    %{
+      "c" => %Node.Comment{uuid: nil, content: "Tiago's Comment"},
+      "u" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}
+    },
+    %{
+      "c" => %Node.Comment{uuid: nil, content: "Davi's Comment"},
+      "u" => %Node.User{uuid: nil, name: "Davi", age: 35, email: nil}
+    }
+ ]
 ```
 
 ```elixir
@@ -134,11 +125,11 @@ end
 ```
 
 ```bash
-  iex> User.execute()
+ iex> User.execute()
  [
-  %{"h" => %Node.Has{uuid: nil, role: "Tiago's Role"}},
-  %{"h" => %Node.Has{uuid: nil, role: "Davi's Role"}}
-]
+    %{"h" => %Node.Has{uuid: nil, role: "Tiago's Role"}},
+    %{"h" => %Node.Has{uuid: nil, role: "Davi's Role"}}
+ ]
 ```
 
 
@@ -158,11 +149,11 @@ end
 ```
 
 ```bash
-  iex> User.execute()
-  [
+iex> User.execute()
+[
   %{"c" => %{"content" => "Tiago's Comment"}, "u" => %{"name" => "Tiago"}},
   %{"c" => %{"content" => "Davi's Comment"}, "u" => %{"name" => "Davi"}}
- ]
+]
 ```
 
 
