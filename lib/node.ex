@@ -1,4 +1,19 @@
 defmodule Ex4j.Node do
+  @moduledoc ~S"""
+  Represents a NODE in your Neo4j Database.
+
+  ## Examples
+
+      defmodule Node.User do
+        use Ex4j.Node
+
+        graph do
+          field(:name, :string)
+          field(:age, :integer)
+          field(:email, :string)
+        end
+      end
+  """
   defmacro __using__(_opts) do
     quote do
       use Ecto.Schema
@@ -35,6 +50,21 @@ defmodule Ex4j.Node do
     end
   end
 
+  @doc """
+  A graph macro similar to Ecto Schemas.
+
+  https://hexdocs.pm/ecto/Ecto.Schema.html
+
+  ## Examples
+
+      graph do
+        field(:name, :string)
+        field(:age, :integer)
+        field(:email, :string)
+        field(:date, :utc_datetime)
+      end
+  """
+  @spec graph(block :: term()) :: term()
   defmacro graph(do: block) do
     quote do
       embedded_schema do
@@ -43,7 +73,7 @@ defmodule Ex4j.Node do
     end
   end
 
-  defmacro instance(schema, props) do
+  defmacrop instance(schema, props) do
     quote do
       unquote(schema)
       |> cast(unquote(props), __MODULE__.__schema__(:fields))

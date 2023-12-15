@@ -98,7 +98,7 @@ defmodule App do
     |> edge(Node.Has, as: :h, from: :u, to: :c, type: :out)
     |> where(:u, "u.age IN [35,38] AND u.name CONTAINS 'Ti'")
     |> where(:c, "c.content CONTAINS 'Article'")
-    |> where(:h, "h.date > '2023-12-15 00:46:05.140690Z'")
+    |> where(:h, "h.date > date('2023-12-15')")
     |> return(:u)
     |> return(:c)
     |> run()

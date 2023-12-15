@@ -13,16 +13,16 @@ defmodule Ex4j.Cypher do
 
   ## Parameters
 
-    - module: The name of the Edge
-    - as: The alias of the Edge
+    - module: The name of the Node
+    - as: The alias of the Node
 
   ## Examples
 
-      iex> match(User, as: :user)
+      iex> match(Node.User, as: :user)
       %{match: %{user: "User"}}
 
-      iex> query = match(User, as: :user)
-      iex> match(query, Comment, as: :comment)
+      iex> query = match(Node.User, as: :user)
+      iex> match(query, Node.Comment, as: :comment)
       %{match: %{user: "User", comment: "Comment"}}
 
   ## Cypher
@@ -46,19 +46,19 @@ defmodule Ex4j.Cypher do
   ## Parameters
 
     - query: The previous query
-    - label: The alias of the Edge or Vertex
+    - label: The alias of the Node
     - rules: The String rules
 
   ## Examples
 
-      iex> query = match(User, as: :user)
+      iex> query = match(Node.User, as: :user)
       iex> where(query, :user, "user.name = 'Tiago' AND user.age = 38")
       %{
         match: %{user: "User"},
         where: %{user: "user.name = 'Tiago' AND user.age = 38"}
       }
 
-      iex> query = match(User, as: :user)
+      iex> query = match(Node.User, as: :user)
       iex> where(query, :user, "user.name = 'Tiago' OR user.age IN [38]")
       %{
         match: %{user: "User"},
@@ -86,21 +86,21 @@ defmodule Ex4j.Cypher do
   ## Parameters
 
     - query: The previous query
-    - label: The alias of the Edge
+    - label: The alias of the Node
     - props: An optional list of properties to return
 
   ## Examples
 
-      iex> query = match(User, as: :user)
+      iex> query = match(Node.User, as: :user)
       iex> return(query, :user)
-      %{return: %{user: []}, match: %{user: {User, []}}}
+      %{return: %{user: []}, match: %{user: "User"}}
 
-      iex> query = match(User, as: :user)
+      iex> query = match(Node.User, as: :user)
       iex> return(query, :user, [:age, name])
-      %{return: %{user: [:age, :name]}, match: %{user: {User, []}}}
+      %{return: %{user: [:age, :name]}, match: %{user: "User"}}
 
-      iex> query = match(User, as: :user)
-      iex> query = match(query, Comment, as: :comment)
+      iex> query = match(Node.User, as: :user)
+      iex> query = match(query, Node.Comment, as: :comment)
       iex> query = return(query, :user, [:age, :name])
       iex> return(query, :comment, [:text])
       %{
@@ -134,7 +134,7 @@ defmodule Ex4j.Cypher do
   ## Parameters
 
     - query: The previous query
-    - limit: The value of limit
+    - limit: The limit value
 
   ## Examples
 
@@ -160,16 +160,19 @@ defmodule Ex4j.Cypher do
   ## Parameters
 
     - query: The previous query
-    - module: The name of the Edge
-    - as: The alias of the Edge
+    - module: The name of the Node
+    - as: The alias of the Node
     - from: Start point
     - to: End point
-    - type: :out (outgoing), :in (incoming), :any (any)
+    - type:
+      - :out (->)
+      - :in  (<-)
+      - :any (-)
 
   ## Examples
 
-      iex> query = match(User, as: :user)
-      iex> query = vertex(query, Comment, as: :comment)
+      iex> query = match(Node.User, as: :user)
+      iex> query = vertex(query, Node.Comment, as: :comment)
       iex> query = edge(query, HAS, as: :h, from: :user, to: :comment, type: :any)
       iex> query = where(query, :user, "user.name = 'Tiago'"])
       iex> query = where(query, :h, "h.value = 42")
@@ -214,13 +217,13 @@ defmodule Ex4j.Cypher do
   ## Parameters
 
     - query: The previous query
-    - module: The name of the Vertex
-    - as: The alias of the Vertex
+    - module: The name of the Node
+    - as: The alias of the Node
 
   ## Examples
 
-      iex> query = match(User, as: :user)
-      iex> query = vertex(query, Comment, as: :comment)
+      iex> query = match(Node.User, as: :user)
+      iex> query = vertex(query, Node.Comment, as: :comment)
       iex> query = edge(query, HAS, as: :h, from: :user, to: :comment, type: :any)
       iex> query = where(query, :user, "user.name = 'Tiago'")
       iex> query = where(query, :comment, "comment.value IN [1,2,3]")
@@ -265,14 +268,15 @@ defmodule Ex4j.Cypher do
 
   ## Examples
 
-      iex> query = match(User, as: :user)
+      iex> query = match(Node.User, as: :user)
       iex> query = return(query, :user)
       iex> run(query)
       [%{"user" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}}]
 
-      iex> query = \""" MATCH (user:User WHERE user.name = 'Tiago')
-                       RETURN user
-                  \"""
+      iex> query = \"""
+                    MATCH (user:User WHERE user.name = 'Tiago')
+                    RETURN user
+                   \"""
       iex> run(query)
       [%{"user" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}}]
   """
@@ -311,6 +315,9 @@ defmodule Ex4j.Cypher do
       iex> query = match(User, as: :user)
       iex> query = return(query, :user)
       iex> cypher(query)
+      "MATCH (user:User) RETURN user"
+
+      iex> cypher("MATCH (user:User) RETURN user")
       "MATCH (user:User) RETURN user"
   """
   @spec cypher(query :: map() | String.t()) :: String.t()
