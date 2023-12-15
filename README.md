@@ -18,6 +18,16 @@ def deps do
 end
 ```
 
+Add the connection settings
+
+```elixir
+config :ex4j, Bolt,
+  url: "bolt://localhost:7687",
+  basic_auth: [username: "neo4j", password: "zEb0zryxK62NNRXKWxJKd7qeEFkO3mLIgcGwuUA4lvg"],
+  pool_size: 10,
+  ssl: false
+```
+
 The docs can be found at <https://hexdocs.pm/ex4j>.
 
 ## Usage 
