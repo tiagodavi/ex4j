@@ -46,7 +46,15 @@ defmodule Ex4j.Node do
           iex> User.new(%User{}, %{"name" => "Tiago"})
           %User{name: "Tiago"}
       """
-      def new(schema, props), do: instance(schema, props)
+      def new(schema, props) do
+        schema
+        |> cast(props, __MODULE__.__schema__(:fields))
+        |> apply_action(:create)
+        |> case do
+          {:ok, data} -> data
+          _ -> raise "Error creating a new #{inspect(__MODULE__)}"
+        end
+      end
     end
   end
 
@@ -69,18 +77,6 @@ defmodule Ex4j.Node do
     quote do
       embedded_schema do
         unquote(block)
-      end
-    end
-  end
-
-  defmacrop instance(schema, props) do
-    quote do
-      unquote(schema)
-      |> cast(unquote(props), __MODULE__.__schema__(:fields))
-      |> apply_action(:create)
-      |> case do
-        {:ok, data} -> data
-        _ -> raise "Error creating a new #{inspect(__MODULE__)}"
       end
     end
   end

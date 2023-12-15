@@ -252,6 +252,11 @@ end
  }}
 ```
 
+## Plans 
+
+- Add support for migrations 
+- Add suport for more Cypher clauses like: CREATE, SKIP
+
 ## License
 
 Ex4j source code is released under Apache License 2.0.
