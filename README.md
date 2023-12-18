@@ -82,10 +82,10 @@ end
 
 ```bash
   iex> App.execute()
-  [
+  {:ok, [
     %{"u" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}},
     %{"u" => %Node.User{uuid: nil, name: "Davi", age: 35, email: nil}}
-  ]
+  ]}
 ```
 
 ```elixir
@@ -108,7 +108,7 @@ end
 
 ```bash
  iex> User.execute()
- [
+ {:ok, [
     %{
       "c" => %Node.Comment{uuid: nil, content: "Tiago's Comment"},
       "u" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}
@@ -117,7 +117,7 @@ end
       "c" => %Node.Comment{uuid: nil, content: "Davi's Comment"},
       "u" => %Node.User{uuid: nil, name: "Davi", age: 35, email: nil}
     }
- ]
+ ]}
 ```
 
 ```elixir
@@ -136,10 +136,10 @@ end
 
 ```bash
  iex> User.execute()
- [
+ {:ok, [
     %{"h" => %Node.Has{uuid: nil, role: "Tiago's Role"}},
     %{"h" => %Node.Has{uuid: nil, role: "Davi's Role"}}
- ]
+ ]}
 ```
 
 
@@ -160,10 +160,10 @@ end
 
 ```bash
 iex> User.execute()
-[
-  %{"c" => %{"content" => "Tiago's Comment"}, "u" => %{"name" => "Tiago"}},
-  %{"c" => %{"content" => "Davi's Comment"}, "u" => %{"name" => "Davi"}}
-]
+{:ok,[
+    {"c" => %{"content" => "Tiago's Comment"}, "u" => %{"name" => "Tiago"}},
+    %{"c" => %{"content" => "Davi's Comment"}, "u" => %{"name" => "Davi"}}
+]}
 ```
 
 

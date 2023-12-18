@@ -271,16 +271,16 @@ defmodule Ex4j.Cypher do
       iex> query = match(Node.User, as: :user)
       iex> query = return(query, :user)
       iex> run(query)
-      [%{"user" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}}]
+      {:ok, [%{"user" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}}]}
 
       iex> query = \"""
                     MATCH (user:User WHERE user.name = 'Tiago')
                     RETURN user
                    \"""
       iex> run(query)
-      [%{"user" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}}]
+      {:ok, [%{"user" => %Node.User{uuid: nil, name: "Tiago", age: 38, email: nil}}]}
   """
-  @spec run(query :: map() | String.t()) :: any()
+  @spec run(query :: map() | String.t()) :: {:ok, term()} | {:error, term()}
   def run(query) when is_map(query) do
     conn = Bolt.Sips.conn()
 
@@ -414,9 +414,12 @@ defmodule Ex4j.Cypher do
   defp build_limit(str, _query), do: str
 
   defp build_response({:ok, %{results: results}}) do
-    Enum.map(results, fn result ->
-      Enum.reduce(result, %{}, &prepare_response/2)
-    end)
+    response =
+      Enum.map(results, fn result ->
+        Enum.reduce(result, %{}, &prepare_response/2)
+      end)
+
+    {:ok, response}
   end
 
   defp build_response({:error, _reason} = response), do: response
