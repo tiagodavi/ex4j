@@ -282,11 +282,11 @@ defmodule Ex4j.Cypher do
   """
   @spec run(query :: map() | String.t()) :: {:ok, term()} | {:error, term()}
   def run(query) when is_map(query) do
-    conn = Bolt.Sips.conn()
+    conn = Ex4j.Application.Boltx
 
-    if is_pid(conn) do
+    if is_pid(Process.whereis(conn)) do
       conn
-      |> Bolt.Sips.query(build(query))
+      |> Boltx.query(build(query))
       |> build_response()
     else
       raise "Neo4j: connection failure"
@@ -294,10 +294,10 @@ defmodule Ex4j.Cypher do
   end
 
   def run(query) when is_binary(query) do
-    conn = Bolt.Sips.conn()
+    conn = Ex4j.Application.Boltx
 
-    if is_pid(conn) do
-      Bolt.Sips.query(conn, query)
+    if is_pid(Process.whereis(conn)) do
+      Boltx.query(conn, query)
     else
       raise "Neo4j: connection failure"
     end
@@ -425,7 +425,7 @@ defmodule Ex4j.Cypher do
   defp build_response({:error, _reason} = response), do: response
 
   defp prepare_response(
-         {key, %Bolt.Sips.Types.Node{properties: properties, labels: [label]}},
+         {key, %Boltx.Types.Node{properties: properties, labels: [label]}},
          acc
        ) do
     module = _to_module(label)
@@ -434,7 +434,7 @@ defmodule Ex4j.Cypher do
   end
 
   defp prepare_response(
-         {key, %Bolt.Sips.Types.Relationship{properties: properties, type: type}},
+         {key, %Boltx.Types.Relationship{properties: properties, type: type}},
          acc
        ) do
     module = _to_module(type)

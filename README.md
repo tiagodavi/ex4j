@@ -1,6 +1,6 @@
 # Ex4j
 
-This library combines the power of Ecto with the Bolt protocol provided by [Bolt Sips](https://github.com/florinpatrascu/bolt_sips) :hearts:
+This library combines the power of Ecto with the Bolt protocol provided by [Boltx](https://github.com/sagastume/boltx) :hearts:
 
 You can use the whole ecto suite you love for validations and structures plus an elegant DSL to retrieve data from Neo4j.
 
@@ -23,7 +23,7 @@ Add the connection settings
 ```elixir
 config :ex4j, Bolt,
   url: "bolt://localhost:7687",
-  basic_auth: [username: "neo4j", password: "zEb0zryxK62NNRXKWxJKd7qeEFkO3mLIgcGwuUA4lvg"],
+  auth: [username: "neo4j", password: "zEb0zryxK62NNRXKWxJKd7qeEFkO3mLIgcGwuUA4lvg"],
   pool_size: 10,
   ssl: false
 ```

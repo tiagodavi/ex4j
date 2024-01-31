@@ -25,4 +25,8 @@ ex4j-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
+# lexical analysis
+.elixir_ls/
+.lexical
+
 .project
