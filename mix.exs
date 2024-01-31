@@ -62,7 +62,7 @@ defmodule Ex4j.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:bolt_sips, "~> 2.0"},
+      {:boltx, "~> 0.0.5"},
       {:ecto, "~> 3.10"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]

@@ -19,7 +19,7 @@ defmodule Ex4j.Application do
 
   defp build_children(config) do
     [
-      {Bolt.Sips, config}
+      {Boltx, config}
     ]
   end
 end
