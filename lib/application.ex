@@ -18,8 +18,12 @@ defmodule Ex4j.Application do
   end
 
   defp build_children(config) do
+    # In boltx the url is defined with the key uri
+    uri = Keyword.get(config, :url, nil)
+    opts = config ++ [name: Ex4j.Application.Boltx, uri: uri]
+
     [
-      {Boltx, config}
+      {Boltx, opts}
     ]
   end
 end

@@ -1,4 +1,5 @@
 defmodule Ex4j.CypherTest do
+  alias Boltx
   use ExUnit.Case, async: true
   use Test.Support.Nodes
   use Ex4j.Cypher
@@ -29,5 +30,39 @@ defmodule Ex4j.CypherTest do
              |> return(:has)
              |> return(:comment)
              |> cypher()
+  end
+
+  describe "execute queries" do
+    setup [:truncate]
+
+    test "execute a query directly" do
+      {:ok, response} = run("RETURN 300 AS r")
+      assert %Boltx.Response{results: [%{"r" => 300}]} = response
+    end
+
+    test "execute a query" do
+      create_query =
+        "CREATE (user:User {name: 'Julee', age: 22, uuid: '70f2b97c-bbed-42ff-92a8-1a5ed950dae7'})"
+
+      run(create_query)
+
+      {:ok, response} = User |> match(as: :user) |> return(:user) |> run()
+
+      assert [
+               %{
+                 "user" => %Node.User{
+                   uuid: "70f2b97c-bbed-42ff-92a8-1a5ed950dae7",
+                   name: "Julee",
+                   age: 22,
+                   email: nil
+                 }
+               }
+             ] = response
+    end
+  end
+
+  defp truncate(c) do
+    {:ok, response} = run("MATCH (n) DETACH DELETE n")
+    c
   end
 end

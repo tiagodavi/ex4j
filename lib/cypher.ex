@@ -282,9 +282,9 @@ defmodule Ex4j.Cypher do
   """
   @spec run(query :: map() | String.t()) :: {:ok, term()} | {:error, term()}
   def run(query) when is_map(query) do
-    {:ok, conn} = Boltx.start_link([])
+    conn = Ex4j.Application.Boltx
 
-    if is_pid(conn) do
+    if is_pid(Process.whereis(conn)) do
       conn
       |> Boltx.query(build(query))
       |> build_response()
@@ -294,9 +294,9 @@ defmodule Ex4j.Cypher do
   end
 
   def run(query) when is_binary(query) do
-    {:ok, conn} = Boltx.start_link([])
+    conn = Ex4j.Application.Boltx
 
-    if is_pid(conn) do
+    if is_pid(Process.whereis(conn)) do
       Boltx.query(conn, query)
     else
       raise "Neo4j: connection failure"
