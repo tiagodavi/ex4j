@@ -1,7 +1,9 @@
-defmodule Node.Has do
-  use Ex4j.Node
+defmodule Test.HasComment do
+  use Ex4j.Schema
 
-  graph do
-    field(:date, :utc_datetime)
+  relationship "HAS_COMMENT" do
+    from(Test.User)
+    to(Test.Comment)
+    field(:created_at, :utc_datetime)
   end
 end

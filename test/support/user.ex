@@ -1,19 +1,15 @@
-defmodule Node.User do
-  use Ex4j.Node
+defmodule Test.User do
+  use Ex4j.Schema
 
-  graph do
+  node "User" do
     field(:name, :string)
     field(:age, :integer)
     field(:email, :string)
   end
 
-  def cypher do
-    match(__MODULE__, as: :user)
-  end
-
-  def changeset(user, params \\ %{}) do
+  def changeset(user, attrs) do
     user
-    |> cast(params, [:name, :email, :age])
+    |> cast(attrs, [:name, :age, :email])
     |> validate_required([:name, :email])
     |> validate_format(:email, ~r/@/)
     |> validate_inclusion(:age, 18..100)

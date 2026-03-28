@@ -1,76 +1,149 @@
 defmodule Ex4j do
   @moduledoc """
-  Combine the power of Ecto with the Bolt protocol + an elegant DSL for Neo4J databases.
+  An Ecto-inspired Cypher DSL and Neo4j driver for Elixir.
 
-  ## Settings
+  Ex4j provides a macro-based query builder that compiles Elixir expressions
+  into parameterized Cypher queries, preventing injection and enabling
+  Neo4j query plan caching.
 
-    Add the dependency:
+  ## Setup
+
+  Add the dependency:
 
       def deps do
-        [
-          {:ex4j, "~> 0.1.0"}
-        ]
+        [{:ex4j, "~> 2.0"}]
       end
 
-     Add the configuration:
+  Configure the connection:
 
-      config :ex4j, Bolt,
+      config :ex4j, Boltx,
         url: "bolt://localhost:7687",
-        basic_auth: [username: "neo4j", password: "zEb0zryxK62NNRXKWxJKd7qeEFkO3mLIgcGwuUA4lvg"],
-        pool_size: 10,
-        ssl: false
+        basic_auth: [username: "neo4j", password: "password"],
+        pool_size: 10
 
-  ## Examples
+  Define a Repo:
 
-      defmodule Node.User do
-        use Ex4j.Node
+      defmodule MyApp.Repo do
+        use Ex4j.Repo, otp_app: :my_app
+      end
 
-        graph do
-          field(:name, :string)
-          field(:age, :integer)
-          field(:email, :string)
+  ## Defining Schemas
+
+      defmodule MyApp.User do
+        use Ex4j.Schema
+
+        node "User" do
+          field :name, :string
+          field :age, :integer
+          field :email, :string
+        end
+
+        def changeset(user, attrs) do
+          user
+          |> cast(attrs, [:name, :age, :email])
+          |> validate_required([:name, :email])
         end
       end
 
-      defmodule Node.Has do
-        use Ex4j.Node
+      defmodule MyApp.Comment do
+        use Ex4j.Schema
 
-        graph do
-          field(:date, :utc_datetime)
+        node "Comment" do
+          field :content, :string
         end
       end
 
-      defmodule Node.Comment do
-        use Ex4j.Node
+      defmodule MyApp.HasComment do
+        use Ex4j.Schema
 
-        graph do
-          field(:content, :string)
+        relationship "HAS_COMMENT" do
+          from MyApp.User
+          to MyApp.Comment
+          field :created_at, :utc_datetime
         end
       end
 
-      defmodule App do
-        use Ex4j.Cypher
+  ## Building Queries
 
-        alias Node.{User, Has, Comment}
+      import Ex4j.Query.API
 
-        def execute do
-          User
-          |> match(as: :user)
-          |> vertex(Comment, as: :comment)
-          |> edge(Has, as: :has, from: :user, to: :comment, type: :out)
-          |> where(:user, "user.name = 'Tiago' OR user.age IN [1,2,3]")
-          |> where(:comment, "comment.content CONTAINS 'Article'")
-          |> where(:has, "has.date > date('2019-09-30')")
-          |> return(:user)
-          |> return(:has)
-          |> return(:comment)
-          |> run()
-        end
-      end
+      # Read with macro-based WHERE (parameterized, safe)
+      User
+      |> match(as: :u)
+      |> where([u], u.age > 18 and u.name == "Tiago")
+      |> return([:u])
+      |> limit(10)
+      |> MyApp.Repo.all()
 
-  ## Cypher
+      # Runtime values with pin operator
+      name = "Tiago"
+      User
+      |> match(as: :u)
+      |> where([u], u.name == ^name)
+      |> return([u], [:name, :age])
+      |> MyApp.Repo.all()
 
-      MATCH (user:User WHERE user.name = 'Tiago' OR user.age IN [1,2,3])-[has:Has WHERE has.date > date('2019-09-30')]->(comment:Comment WHERE comment.content CONTAINS 'Article')
-      RETURN user, has, comment
+      # Relationship traversal
+      User
+      |> match(as: :u)
+      |> edge(HasComment, as: :r, from: :u, to: :c, direction: :out)
+      |> match(Comment, as: :c)
+      |> where([c], c.content =~ "Article")
+      |> return([:u, :c])
+      |> MyApp.Repo.all()
+
+      # CREATE
+      query()
+      |> create(User, as: :u, set: %{name: "Alice", age: 30, email: "alice@example.com"})
+      |> return([:u])
+      |> MyApp.Repo.run()
+
+      # MERGE + SET
+      query()
+      |> merge(User, as: :u, match: %{email: "alice@example.com"})
+      |> set(:u, :name, "Alice Updated")
+      |> return([:u])
+      |> MyApp.Repo.run()
+
+      # DELETE
+      User
+      |> match(as: :u)
+      |> where([u], u.name == "Alice")
+      |> delete(:u, detach: true)
+      |> MyApp.Repo.run()
+
+      # Dynamic queries for runtime conditions
+      dynamic = Enum.reduce(filters, dynamic([u], true), fn
+        {:name, name}, dyn -> dynamic([u], ^dyn and u.name == ^name)
+        {:min_age, age}, dyn -> dynamic([u], ^dyn and u.age >= ^age)
+      end)
+
+      User |> match(as: :u) |> where(^dynamic) |> return([:u]) |> MyApp.Repo.all()
+
+      # Fragment for raw Cypher
+      User
+      |> match(as: :u)
+      |> where([u], fragment("u.score > duration(?)", "P1Y"))
+      |> return([:u])
+      |> MyApp.Repo.all()
+
+      # Raw Cypher query (full escape hatch)
+      MyApp.Repo.query("MATCH (n:User) RETURN n LIMIT 25")
+
+      # Transactions
+      MyApp.Repo.transaction(fn ->
+        MyApp.Repo.run(create_query)
+        MyApp.Repo.run(relationship_query)
+      end)
+
+  ## Cypher 25 Support
+
+  Ex4j supports the latest Cypher 25 features including:
+  - Walk semantics (REPEATABLE ELEMENTS)
+  - Vector operations (vector(), vector_distance(), etc.)
+  - Full aggregation function set
+  - Subqueries with CALL {}
+  - UNION / UNION ALL
+  - Variable-length relationship patterns
   """
 end

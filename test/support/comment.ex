@@ -1,7 +1,7 @@
-defmodule Node.Comment do
-  use Ex4j.Node
+defmodule Test.Comment do
+  use Ex4j.Schema
 
-  graph do
+  node "Comment" do
     field(:content, :string)
   end
 end
