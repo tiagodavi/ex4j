@@ -25,5 +25,6 @@ ex4j-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
+.DS_Store
 .project
 .claude
