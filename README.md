@@ -13,7 +13,7 @@ Add `ex4j` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ex4j, "~> 2.0"}
+    {:ex4j, "~> 0.2.0"}
   ]
 end
 ```
@@ -26,6 +26,13 @@ config :ex4j, Boltx,
   url: "bolt://localhost:7687",
   basic_auth: [username: "neo4j", password: "your_password"],
   pool_size: 10
+
+# For Neo4j Aura (cloud), use neo4j+s:// and specify the database name:
+config :ex4j, Boltx,
+  url: "neo4j+s://your-instance-id.databases.neo4j.io",
+  basic_auth: [username: "your_username", password: "your_password"],
+  database: "your-database-name",
+  pool_size: 5
 ```
 
 Define a Repo module for executing queries:
@@ -69,15 +76,14 @@ defmodule MyApp.User do
 end
 ```
 
-### Multi-Label Nodes
+### Comments
 
 ```elixir
-defmodule MyApp.Admin do
+defmodule MyApp.Comment do
   use Ex4j.Schema
 
-  node ["Person", "Admin"] do
-    field(:name, :string)
-    field(:role, :string)
+  node "Comment" do
+    field(:content, :string)
   end
 end
 ```
@@ -96,17 +102,22 @@ defmodule MyApp.HasComment do
 end
 ```
 
-### Comments
+### Multi-Label Nodes
 
 ```elixir
-defmodule MyApp.Comment do
+defmodule MyApp.Admin do
   use Ex4j.Schema
 
-  node "Comment" do
-    field(:content, :string)
+  node ["Person", "Admin"] do
+    field(:name, :string)
+    field(:role, :string)
   end
 end
 ```
+
+
+
+
 
 All schemas automatically get:
 - Ecto `embedded_schema` with a `:uuid` primary key
@@ -299,6 +310,48 @@ query()
 ```cypher
 CREATE (u:User {name: $p0, age: $p1, email: $p2})
 RETURN u
+```
+
+### CREATE Relationship
+
+```elixir
+query()
+|> match(User, as: :u, where: %{email: "alice@example.com"})
+|> match(Comment, as: :c, where: %{content: "Great article!"})
+|> create(HasComment, as: :r, from: :u, to: :c, set: %{created_at: "2025-06-01T10:00:00Z"})
+|> return([:r])
+|> MyApp.Repo.run()
+```
+
+**Generated Cypher:**
+
+```cypher
+MATCH (u:User {email: $p0}), (c:Comment {content: $p1})
+CREATE (u)-[r:HAS_COMMENT {created_at: $p2}]->(c)
+RETURN r
+```
+
+You can also create relationships without properties:
+
+```elixir
+query()
+|> match(User, as: :u, where: %{email: "bob@example.com"})
+|> match(Comment, as: :c, where: %{content: "Great article!"})
+|> create(HasComment, as: :r, from: :u, to: :c)
+|> return([:r])
+|> MyApp.Repo.run()
+```
+
+Or with a specific direction:
+
+```elixir
+# Incoming relationship
+query()
+|> match(User, as: :u, where: %{email: "alice@example.com"})
+|> match(Comment, as: :c, where: %{content: "Great article!"})
+|> create(HasComment, as: :r, from: :u, to: :c, direction: :in)
+|> return([:r])
+|> MyApp.Repo.run()
 ```
 
 ### MERGE
@@ -635,6 +688,107 @@ Ex4j includes a comprehensive Cypher functions registry supporting Cypher 25 add
 - **Temporal**: `date`, `datetime`, `duration`, `time`, `timestamp`
 - **Spatial**: `point`, `distance`
 - **Cypher 25 Vectors**: `vector`, `vector_dimension_count`, `vector_distance`, `vector_norm`
+
+## Sample Data for Testing
+
+A complete seed script using the `User`, `Comment`, and `HasComment` schemas.
+Paste this into `priv/repo/seeds.exs` or run it in `iex -S mix`.
+
+```elixir
+import Ex4j.Query.API
+
+alias MyApp.{User, Comment, HasComment}
+
+# --- Indexes & Constraints ---------------------------------------------------
+
+MyApp.Repo.query("CREATE CONSTRAINT user_email_unique IF NOT EXISTS FOR (u:User) REQUIRE u.email IS UNIQUE")
+MyApp.Repo.query("CREATE INDEX user_name_index IF NOT EXISTS FOR (u:User) ON (u.name)")
+MyApp.Repo.query("CREATE INDEX comment_content_index IF NOT EXISTS FOR (c:Comment) ON (c.content)")
+
+# --- Nodes: Users ------------------------------------------------------------
+
+users = [
+  %{name: "Tiago", age: 38, email: "tiago@example.com"},
+  %{name: "Alice", age: 30, email: "alice@example.com"},
+  %{name: "Bob",   age: 25, email: "bob@example.com"}
+]
+
+for attrs <- users do
+  query()
+  |> create(User, as: :u, set: attrs)
+  |> return([:u])
+  |> MyApp.Repo.run()
+end
+
+# --- Nodes: Comments ----------------------------------------------------------
+
+comments = [
+  %{content: "Great article on Elixir!"},
+  %{content: "Neo4j is awesome for graph data"},
+  %{content: "Loving the Ex4j DSL"}
+]
+
+for attrs <- comments do
+  query()
+  |> create(Comment, as: :c, set: attrs)
+  |> return([:c])
+  |> MyApp.Repo.run()
+end
+
+# --- Edges: HAS_COMMENT (with optional properties) ---------------------------
+
+edges = [
+  {"tiago@example.com", "Great article on Elixir!",          %{created_at: "2025-06-01T10:00:00Z"}},
+  {"tiago@example.com", "Neo4j is awesome for graph data",   %{created_at: "2025-06-02T14:30:00Z"}},
+  {"alice@example.com", "Loving the Ex4j DSL",               %{created_at: "2025-06-03T09:15:00Z"}},
+  {"bob@example.com",   "Great article on Elixir!",          %{}}  # no properties
+]
+
+for {email, content, props} <- edges do
+  query()
+  |> match(User, as: :u, where: %{email: email})
+  |> match(Comment, as: :c, where: %{content: content})
+  |> create(HasComment, as: :r, from: :u, to: :c, set: props)
+  |> return([:r])
+  |> MyApp.Repo.run()
+end
+
+# --- Verify ------------------------------------------------------------------
+
+# All users with their comments
+query()
+|> match(User, as: :u)
+|> match(Comment, as: :c)
+|> edge(HasComment, as: :r, from: :u, to: :c, direction: :out)
+|> return([:u, :r, :c])
+|> MyApp.Repo.all()
+
+# Users older than 25
+User
+|> match(as: :u)
+|> where([u], u.age > 25)
+|> return([u], [:name, :email])
+|> order_by([u], asc: :name)
+|> MyApp.Repo.all()
+
+# Bob's comments (should be 1, no properties on the edge)
+query()
+|> match(User, as: :u)
+|> match(Comment, as: :c)
+|> edge(HasComment, as: :r, from: :u, to: :c, direction: :out)
+|> where([u], u.name == "Bob")
+|> return([:c, :r])
+|> MyApp.Repo.all()
+```
+
+### Cleanup
+
+```elixir
+MyApp.Repo.query("MATCH (n) DETACH DELETE n")
+MyApp.Repo.query("DROP CONSTRAINT user_email_unique IF EXISTS")
+MyApp.Repo.query("DROP INDEX user_name_index IF EXISTS")
+MyApp.Repo.query("DROP INDEX comment_content_index IF EXISTS")
+```
 
 ## Architecture
 

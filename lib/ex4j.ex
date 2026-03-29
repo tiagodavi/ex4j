@@ -21,6 +21,13 @@ defmodule Ex4j do
         basic_auth: [username: "neo4j", password: "password"],
         pool_size: 10
 
+      # For Neo4j Aura:
+      config :ex4j, Boltx,
+        url: "neo4j+s://your-instance.databases.neo4j.io",
+        basic_auth: [username: "your_username", password: "your_password"],
+        database: "your-database-name",
+        pool_size: 5
+
   Define a Repo:
 
       defmodule MyApp.Repo do

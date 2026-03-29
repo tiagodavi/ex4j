@@ -64,33 +64,35 @@ defmodule Ex4j.Query.API do
       query |> match(User, as: :u)
   """
   defmacro match(queryable, opts) do
-    {schema, binding, _mode} = extract_match_opts(opts)
+    {schema, binding, _mode, where} = extract_match_opts(opts)
+    where = where || {:%{}, [], []}
 
     if schema do
       quote do
         query = Builder.ensure_query(unquote(queryable))
         module = unquote(schema)
         labels = module.__schema__(:ex4j_labels)
-        Builder.apply_match(query, unquote(binding), labels, module)
+        Builder.apply_match(query, unquote(binding), labels, module, unquote(where))
       end
     else
       quote do
         query = Builder.ensure_query(unquote(queryable))
         source = query.source
         labels = if source, do: source.__schema__(:ex4j_labels), else: []
-        Builder.apply_match(query, unquote(binding), labels, source)
+        Builder.apply_match(query, unquote(binding), labels, source, unquote(where))
       end
     end
   end
 
   defmacro match(queryable, schema, opts) do
-    {_schema, binding, _mode} = extract_match_opts(opts)
+    {_schema, binding, _mode, where} = extract_match_opts(opts)
+    where = where || {:%{}, [], []}
 
     quote do
       query = Builder.ensure_query(unquote(queryable))
       module = unquote(schema)
       labels = module.__schema__(:ex4j_labels)
-      Builder.apply_match(query, unquote(binding), labels, module)
+      Builder.apply_match(query, unquote(binding), labels, module, unquote(where))
     end
   end
 
@@ -104,7 +106,7 @@ defmodule Ex4j.Query.API do
       |> optional_match(Comment, as: :c)
   """
   defmacro optional_match(queryable, schema, opts) do
-    {_schema, binding, _mode} = extract_match_opts(opts)
+    {_schema, binding, _mode, _where} = extract_match_opts(opts)
 
     quote do
       query = Builder.ensure_query(unquote(queryable))
@@ -311,13 +313,49 @@ defmodule Ex4j.Query.API do
   """
   defmacro create(queryable, schema, opts) do
     binding = Keyword.fetch!(opts, :as)
-    props = Keyword.get(opts, :set, %{})
+    props = Keyword.get(opts, :set, {:%{}, [], []})
+    from = Keyword.get(opts, :from)
+    to = Keyword.get(opts, :to)
+    direction = Keyword.get(opts, :direction, :out)
 
-    quote do
-      query = Builder.ensure_query(unquote(queryable))
-      module = unquote(schema)
-      labels = module.__schema__(:ex4j_labels)
-      Builder.apply_create(query, unquote(binding), labels, unquote(props), module)
+    # Dispatch at compile time based on whether :from/:to options are provided.
+    # This avoids a runtime `case` on __schema__(:ex4j_type) which triggers
+    # unreachable clause warnings from the type checker.
+    if from || to do
+      quote do
+        query = Builder.ensure_query(unquote(queryable))
+        module = unquote(schema)
+
+        from_binding =
+          unquote(from) ||
+            raise ArgumentError,
+                  "create/3 with a relationship schema requires :from option"
+
+        to_binding =
+          unquote(to) ||
+            raise ArgumentError,
+                  "create/3 with a relationship schema requires :to option"
+
+        rel_type = module.__schema__(:ex4j_rel_type)
+
+        Builder.apply_create_rel(
+          query,
+          from_binding,
+          unquote(binding),
+          rel_type,
+          to_binding,
+          unquote(direction),
+          unquote(props),
+          module
+        )
+      end
+    else
+      quote do
+        query = Builder.ensure_query(unquote(queryable))
+        module = unquote(schema)
+        labels = module.__schema__(:ex4j_labels)
+        Builder.apply_create(query, unquote(binding), labels, unquote(props), module)
+      end
     end
   end
 
@@ -594,11 +632,22 @@ defmodule Ex4j.Query.API do
 
   # Private helpers
 
+  @valid_match_opts [:as, :schema, :mode, :where]
+
   defp extract_match_opts(opts) do
+    unknown = Keyword.keys(opts) -- @valid_match_opts
+
+    if unknown != [] do
+      raise ArgumentError,
+            "unknown option(s) #{inspect(unknown)} passed to match/2 or match/3. " <>
+              "Valid options are: #{inspect(@valid_match_opts)}"
+    end
+
     binding = Keyword.fetch!(opts, :as)
     schema = Keyword.get(opts, :schema)
     mode = Keyword.get(opts, :mode)
-    {schema, binding, mode}
+    where = Keyword.get(opts, :where)
+    {schema, binding, mode, where}
   end
 
   defp extract_where_args({:^, _, [inner_var]}, nil) do

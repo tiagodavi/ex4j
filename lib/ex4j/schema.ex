@@ -54,7 +54,7 @@ defmodule Ex4j.Schema do
       import Ecto.Changeset
       import Ex4j.Schema, only: [node: 2, relationship: 2, from: 1, to: 1]
 
-      @primary_key {:uuid, :binary_id, autogenerate: false}
+      @primary_key {:id, :string, autogenerate: false}
       @type t :: %__MODULE__{}
 
       Module.register_attribute(__MODULE__, :ex4j_type, accumulate: false)
@@ -85,7 +85,7 @@ defmodule Ex4j.Schema do
           from_schema: unquote(from_schema),
           to_schema: unquote(to_schema),
           fields: __MODULE__.__schema__(:fields),
-          primary_key: :uuid
+          primary_key: :id
         }
       end
 

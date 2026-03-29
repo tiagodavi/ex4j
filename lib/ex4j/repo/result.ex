@@ -50,6 +50,14 @@ defmodule Ex4j.Repo.Result do
 
   defp hydrate_node_or_rel(data, schema_module) do
     properties = Map.get(data, :properties) || Map.get(data, "properties") || %{}
+    element_id = Map.get(data, :element_id) || Map.get(data, "element_id")
+
+    properties =
+      if element_id do
+        Map.put_new(properties, "id", element_id)
+      else
+        properties
+      end
 
     try do
       schema_module.new(stringify_keys(properties))

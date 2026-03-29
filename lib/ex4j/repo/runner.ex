@@ -18,7 +18,12 @@ defmodule Ex4j.Repo.Runner do
     {cypher_str, params} = Cypher.to_cypher(query)
 
     case Ex4j.Bolt.query(cypher_str, params) do
-      {:ok, results} ->
+      {:ok, %Boltx.Response{fields: fields, records: records}} ->
+        results = to_maps(fields, records)
+        hydrated = Result.hydrate(results, query)
+        {:ok, hydrated}
+
+      {:ok, results} when is_list(results) ->
         hydrated = Result.hydrate(results, query)
         {:ok, hydrated}
 
@@ -63,5 +68,13 @@ defmodule Ex4j.Repo.Runner do
   @spec transaction(function(), keyword()) :: {:ok, term()} | {:error, term()}
   def transaction(fun, _config) when is_function(fun) do
     Ex4j.Bolt.transaction(fun)
+  end
+
+  defp to_maps(fields, records) do
+    Enum.map(records, fn record ->
+      fields
+      |> Enum.zip(record)
+      |> Map.new()
+    end)
   end
 end

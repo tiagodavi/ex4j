@@ -1,7 +1,7 @@
 defmodule Ex4j.MixProject do
   use Mix.Project
 
-  @version "2.0.0-dev"
+  @version "0.2.0"
   @url_docs "https://hexdocs.pm/ex4j."
   @url_github "https://github.com/tiagodavi/ex4j"
 
@@ -12,13 +12,14 @@ defmodule Ex4j.MixProject do
       source_url: @url_github,
       homepage_url: @url_docs,
       version: @version,
-      elixir: "~> 1.16",
+      elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       description: description(),
       package: package(),
       deps: deps(),
       docs: docs(),
       elixirc_paths: elixirc_paths(Mix.env()),
+      elixirc_options: [ignore_module_conflict: true],
       source_url: @url_github
     ]
   end
@@ -63,6 +64,7 @@ defmodule Ex4j.MixProject do
   defp deps do
     [
       {:boltx, "~> 0.0.6"},
+      {:jason, "~> 1.4"},
       {:ecto, "~> 3.12"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]

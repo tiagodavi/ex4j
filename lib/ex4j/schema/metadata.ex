@@ -24,6 +24,6 @@ defmodule Ex4j.Schema.Metadata do
     :to_schema,
     labels: [],
     fields: [],
-    primary_key: :uuid
+    primary_key: :id
   ]
 end

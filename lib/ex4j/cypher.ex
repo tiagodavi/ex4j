@@ -29,6 +29,7 @@ defmodule Ex4j.Cypher do
       |> build_unwinds(query)
       |> build_calls(query)
       |> build_creates(query)
+      |> build_create_rels(query)
       |> build_merges(query)
       |> build_sets(query)
       |> build_removes(query)
@@ -69,9 +70,10 @@ defmodule Ex4j.Cypher do
     rel_map = Enum.group_by(relationships, fn {from, _, _, _, _, _} -> from end)
 
     match_strs =
-      Enum.map(matches, fn {binding, labels, _opts} ->
+      Enum.map(matches, fn {binding, labels, props} ->
         label_str = Enum.join(labels, ":")
-        node_str = "(#{binding}:#{label_str})"
+        props_str = build_inline_props(props)
+        node_str = "(#{binding}:#{label_str}#{props_str})"
 
         # Append any outgoing relationships from this node
         case Map.get(rel_map, binding) do
@@ -112,13 +114,24 @@ defmodule Ex4j.Cypher do
 
   defp build_target_node(to_binding, matches) do
     case Enum.find(matches, fn {binding, _, _} -> binding == to_binding end) do
-      {binding, labels, _} ->
+      {binding, labels, props} ->
         label_str = Enum.join(labels, ":")
-        "(#{binding}:#{label_str})"
+        props_str = build_inline_props(props)
+        "(#{binding}:#{label_str}#{props_str})"
 
       nil ->
         "(#{to_binding})"
     end
+  end
+
+  defp build_inline_props(props) when props == %{}, do: ""
+
+  defp build_inline_props(props) do
+    inner =
+      Enum.map(props, fn {key, param_key} -> "#{key}: $#{param_key}" end)
+      |> Enum.join(", ")
+
+    " {#{inner}}"
   end
 
   defp build_relationship_pattern(rel_binding, rel_label, direction, length) do
@@ -234,6 +247,38 @@ defmodule Ex4j.Cypher do
       end)
 
     clauses ++ create_strs
+  end
+
+  # CREATE relationship clauses
+  defp build_create_rels(clauses, %Query{create_rels: []}), do: clauses
+
+  defp build_create_rels(clauses, %Query{create_rels: create_rels}) do
+    create_rel_strs =
+      Enum.map(create_rels, fn {from, rel_binding, rel_type, to, direction, param_props} ->
+        props_str =
+          if map_size(param_props) > 0 do
+            props =
+              Enum.map(param_props, fn {key, param_key} -> "#{key}: $#{param_key}" end)
+              |> Enum.join(", ")
+
+            " {#{props}}"
+          else
+            ""
+          end
+
+        rel_inner = "[#{rel_binding}:#{rel_type}#{props_str}]"
+
+        rel_pattern =
+          case direction do
+            :out -> "-#{rel_inner}->"
+            :in -> "<-#{rel_inner}-"
+            :any -> "-#{rel_inner}-"
+          end
+
+        "CREATE (#{from})#{rel_pattern}(#{to})"
+      end)
+
+    clauses ++ create_rel_strs
   end
 
   # MERGE clauses

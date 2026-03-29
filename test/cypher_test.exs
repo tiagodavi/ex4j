@@ -352,6 +352,46 @@ defmodule Ex4j.CypherTest do
       assert "Alice" in values
       assert 30 in values
     end
+
+    test "creates a relationship with properties" do
+      {cypher, params} =
+        query()
+        |> match(User, as: :u, where: %{email: "alice@example.com"})
+        |> match(Comment, as: :c, where: %{content: "Great article!"})
+        |> create(HasComment, as: :r, from: :u, to: :c, set: %{created_at: "2025-06-01T10:00:00Z"})
+        |> return([:r])
+        |> to_cypher()
+
+      assert cypher =~ "CREATE (u)-[r:HAS_COMMENT {created_at: $"
+      assert cypher =~ "}]->(c)"
+      assert cypher =~ "RETURN r"
+      assert "2025-06-01T10:00:00Z" in Map.values(params)
+    end
+
+    test "creates a relationship without properties" do
+      {cypher, _params} =
+        query()
+        |> match(User, as: :u)
+        |> match(Comment, as: :c)
+        |> create(HasComment, as: :r, from: :u, to: :c)
+        |> return([:r])
+        |> to_cypher()
+
+      assert cypher =~ "CREATE (u)-[r:HAS_COMMENT]->(c)"
+      assert cypher =~ "RETURN r"
+    end
+
+    test "creates an incoming relationship" do
+      {cypher, _params} =
+        query()
+        |> match(User, as: :u)
+        |> match(Comment, as: :c)
+        |> create(HasComment, as: :r, from: :u, to: :c, direction: :in)
+        |> return([:r])
+        |> to_cypher()
+
+      assert cypher =~ "CREATE (u)<-[r:HAS_COMMENT]-(c)"
+    end
   end
 
   describe "merge" do

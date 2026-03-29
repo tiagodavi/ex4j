@@ -25,11 +25,15 @@ defmodule Ex4j.Query do
   @type relationship_entry ::
           {binding(), binding(), String.t(), binding(), direction(), Range.t() | nil}
 
+  @type create_rel_entry ::
+          {binding(), binding(), String.t(), binding(), :out | :in | :any, map()}
+
   @type t :: %__MODULE__{
           source: module() | nil,
           matches: [match_entry()],
           optional_matches: [match_entry()],
           creates: [{binding(), String.t(), map()}],
+          create_rels: [create_rel_entry()],
           merges: [{binding(), String.t(), map()}],
           wheres: [BooleanExpr.t()],
           returns: [SelectExpr.t()],
@@ -54,6 +58,7 @@ defmodule Ex4j.Query do
             matches: [],
             optional_matches: [],
             creates: [],
+            create_rels: [],
             merges: [],
             wheres: [],
             returns: [],

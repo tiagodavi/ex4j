@@ -22,13 +22,20 @@ defmodule Ex4j.Query.Builder do
   @doc """
   Applies a MATCH clause.
   """
-  @spec apply_match(Query.t(), atom(), String.t() | [String.t()], module() | nil) :: Query.t()
-  def apply_match(%Query{} = query, binding, labels, schema_module) do
+  @spec apply_match(Query.t(), atom(), String.t() | [String.t()], module() | nil, map()) ::
+          Query.t()
+  def apply_match(%Query{} = query, binding, labels, schema_module, where_props \\ %{}) do
     labels = List.wrap(labels)
+
+    {param_props, query} =
+      Enum.reduce(where_props, {%{}, query}, fn {key, value}, {acc, q} ->
+        {q, param_key} = Query.add_param(q, value)
+        {Map.put(acc, key, param_key), q}
+      end)
 
     %{
       query
-      | matches: query.matches ++ [{binding, labels, []}],
+      | matches: query.matches ++ [{binding, labels, param_props}],
         aliases: Map.put(query.aliases, binding, schema_module)
     }
   end
@@ -142,6 +149,43 @@ defmodule Ex4j.Query.Builder do
       query
       | creates: query.creates ++ [{binding, labels, param_props}],
         aliases: Map.put(query.aliases, binding, schema_module)
+    }
+  end
+
+  @doc """
+  Applies a CREATE clause for a relationship.
+  """
+  @spec apply_create_rel(
+          Query.t(),
+          atom(),
+          atom(),
+          String.t(),
+          atom(),
+          :out | :in | :any,
+          map(),
+          module() | nil
+        ) :: Query.t()
+  def apply_create_rel(
+        %Query{} = query,
+        from,
+        rel_binding,
+        rel_type,
+        to,
+        direction,
+        props,
+        schema_module
+      ) do
+    {param_props, query} =
+      Enum.reduce(props, {%{}, query}, fn {key, value}, {acc, q} ->
+        {q, param_key} = Query.add_param(q, value)
+        {Map.put(acc, key, param_key), q}
+      end)
+
+    %{
+      query
+      | create_rels:
+          query.create_rels ++ [{from, rel_binding, rel_type, to, direction, param_props}],
+        aliases: Map.put(query.aliases, rel_binding, schema_module)
     }
   end
 

@@ -22,9 +22,13 @@ defmodule Ex4j.Bolt do
   """
   @spec query(String.t(), map()) :: {:ok, term()} | {:error, term()}
   def query(cypher, params \\ %{}) do
-    case Process.get(:ex4j_tx_conn) do
-      nil -> Boltx.query(@pool_name, cypher, params)
-      conn -> Boltx.query(conn, cypher, params)
+    conn = Process.get(:ex4j_tx_conn) || @pool_name
+    query = %Boltx.Query{statement: cypher, extra: query_extra()}
+    formatted_params = format_params(params)
+
+    case DBConnection.prepare_execute(conn, query, formatted_params) do
+      {:ok, _query, result} -> {:ok, result}
+      {:error, _} = error -> error
     end
   rescue
     e -> {:error, Exception.message(e)}
@@ -47,4 +51,25 @@ defmodule Ex4j.Bolt do
   rescue
     e -> {:error, Exception.message(e)}
   end
+
+  defp query_extra do
+    case Application.get_env(:ex4j, :database) do
+      nil -> %{}
+      db -> %{db: db}
+    end
+  end
+
+  defp format_params(params) do
+    params
+    |> Enum.map(&format_param/1)
+    |> Map.new()
+  end
+
+  defp format_param({k, %Boltx.Types.Duration{} = v}),
+    do: {k, Boltx.Types.Duration.format_param(v)}
+
+  defp format_param({k, %Boltx.Types.Point{} = v}),
+    do: {k, Boltx.Types.Point.format_param(v)}
+
+  defp format_param({k, v}), do: {k, v}
 end
